@@ -47,8 +47,9 @@ namespace SyncthingTray
                 paDialog.BackgroundWorker.ReportProgress(0, "Checking for latest version...");
 
                 var repos = _githubClient.Release.GetAll("syncthing", "syncthing").Result;
-                var latest = _githubClient.Release.GetAssets("syncthing", "syncthing", repos[0].Id).Result;
-                var parse = GrabVersions(latest, repos[0]);
+                var release = repos.FirstOrDefault(r => !r.Prerelease);
+                var latest = _githubClient.Release.GetAssets("syncthing", "syncthing", release.Id).Result;
+                var parse = GrabVersions(latest, release);
                 var asset = Environment.Is64BitOperatingSystem ? parse.LatestAmd64 : parse.LatestIntel386;
 
                 paDialog.BackgroundWorker.ReportProgress(0, string.Format("Downloading {0}...", asset.Name));
@@ -76,7 +77,7 @@ namespace SyncthingTray
             {
                 if (args.Error != null)
                 {
-                    MessageBox.Show(args.Error.Message);
+                    MessageBox.Show(args.Error.ToString());
                 }
             };
             paDialog.ShowDialog();
@@ -84,6 +85,7 @@ namespace SyncthingTray
 
         private static LatestVersionRetrievedEventArgs GrabVersions(IEnumerable<ReleaseAsset> latest, Release release)
         {
+
             var windowsLatest = latest.Where(asset => asset.Name.Contains("windows"));
             var windowsIntel386 = windowsLatest.FirstOrDefault(asset => asset.Name.Contains("386"));
             var windowsAmd64 = windowsLatest.FirstOrDefault(asset => asset.Name.Contains("amd64"));
